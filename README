@@ -1,0 +1,20 @@
+gfx_buy_guide.sh
+License: GPL v3
+(c) 2011 Joe Balough
+Requirements: bash, sed, mysql
+
+This script is used to compare the prices and passmark benchmarks of graphic cards for sale on kakaku.com in Japan.
+The script could easily be modified to work with newegg for example but would require some modifications by somebody who knows how to work bash.
+I've added some notes throughout to help you modify the script to your needs.
+
+Usage is pretty simple. Just run it like so:
+./gfx_buy_guide.sh [pages]
+from the terminal replacing [pages] with the number of listing pages to parse. Note that the input is not checked for validity.
+You must also have a mysql database configured called 'gpu' that you have full privilages on. See the MySQL documentation for help with that.
+Run ./gfx_buy_guide.sh -h for help.
+
+The script produces a file called card_data.tsv which is a tab-separated-value file that you can easily paste into any popular spreadsheet program.
+That file contains the card name, GPU, price, Passmark rank, Passmark score, Ram type, Ram amount, and the outputs. That information (minus the passmark stuff)
+is basically what kakaku.com puts on the page for graphics card listings.
+
+I tried to make the script very understadable so that it's easily modifiable but unfortunately, you'd need to understand sed pretty well to make much of it.
