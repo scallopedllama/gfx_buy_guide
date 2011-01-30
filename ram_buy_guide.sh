@@ -55,67 +55,28 @@ fi
 # This command will probably not need to be modified.
 # That last 'g' is needed to ensure it does all replacements. The last 'p' combines with the -n option to ONLY print the lines that have been changed ONCE.
 # Example line:      A-DATA                        AD31600G001GMU                           1GB             SS             -                     -                       9-9-9-24           1.65~1.85       ●       ●
-sed -n "s:^ {2,500}\(.*\) {2,500}\(.*\) {2,500}\(.*\) {2,500}\(..\) {2,500}.* {2,500}.* {2,500}\(.*\) {2,500}\(.*\) *\(.?\) *\(.?\) *\(.?\) *$:\1\t\2\t\3\t\4\t\5\t\6\t\7\t\8\t\9:pg" qvl.txt > qvl.tsv
+grep "^  \+.*  \+.*  \+[1-9]GB" qvl.txt | sed "s:^  \+::g" | sed "s:  \+:\t:g" | grep "^" > qvl.tsv
+
+# Make sure there's some data in that file
+ram_entries=`wc -l qvl.tsv | awk '{print($1)}'`
+if [ $ram_entries -lt 50 ]
+then
+  echo "Warning: The processed QVL file gave fewer than 50 entries for the database."
+  echo "         This may be because ASUS changed the layout the file and the sed regex doesn't work anymore."
+  echo "         Got $ram_entries entries. Continuing anyway."
+fi
 
 exit 0
 
-# Make sure there's some data in that file
-benchmark_entries=`wc -l benchmarks.tsv | awk '{print($1)}'`
-if [ $benchmark_entries -lt 50 ]
-then
-  echo "Warning: The processed benchmark file gave fewer than 50 entries for the database."
-  echo "         This may be because passmark changed their site layout and the sed regex doesn't work anymore."
-  echo "         Got $benchmark_entries entries. Continuing anyway."
-fi
-
-echo "Getting kakaku.com page listings."
+echo "Searching kakaku.com for RAM modules..."
 
 # Loop through getting all the kakaku page listings
-for (( i=1; i<=$1; i++ ))
+for (( i=1; i<=$ram_entries; i++ ))
 do
-  # All the pages of the kakaku listings      \/ Page number, ex: 001, 002, etc
-  #    http://kakaku.com/pc/videocard/ma_0/p1NNN/s1=1/s3=1024/
-  echo -n "  Page $i: "
+  # Search url for kakaku.com
+  #    http://kakaku.com/search_results/?c=&query=$card&category=&minPrice=&maxPrice=&sort=popular&rgb=&shop=&act=Input&l=l&rgbs=
+  echo -n "  $Part No: "
   
-  # To modify this to work with a different source like Newegg, you need to go to that page and 
-  # filter the list down as much as possible. For example, the kakaku page above returns only PCI Express 16x
-  # cards with 1GB or more of RAM. If you only want to look at Nvidia cards, include that in the filter.
-  # Once you have the list filtered to your liking, copy out the url of the first page of results into a text editor.
-  # Then go to the second page of results and copy that url into the same text editor.
-  # Try to find what changes in the url between each page of the results. 
-  # For the kakaku example, the .../p1001/... part of the url changes to .../p1002/... for the second page.
-  # If the url of your results page increments by some arbitrary amount every page, you will need to modify
-  # the for loop on line 60 to the following:
-  # for (( i=$start_value; i<=$(($1*$arbitrary_amount+$start_value)); i+=$arbitrary_amount ))
-  # Where $arbitrary_amount is how much each page increments by and $start_value is where it starts.
-  
-  # This formats the current page counter to a string with 0s padding the front so that it is 2 characters long. 
-  # If the number of pages in your results go into the hundreds or thousands, you will need to modify the amount
-  # padding this printf uses.
-  j=$(printf "%02d" "$i")
-  
-  # The text after the -O flag indicates the output so don't change that, just change the url that follows.
-  # Take the url you got from your search and put it here and replace only the part that changes with a $j.
-  # It should work just fine so long as you changed the printf above correctly.
-  wget -q -O cards$j.sj.html http://kakaku.com/pc/videocard/ma_0/p10$j/s1=1/s3=1024/
-  
-  # Make sure it's there
-  if [ -a "cards$j.sj.html" ]
-  then
-    echo "ok."
-  else
-    echo "failed."
-    echo "    There was a problem getting the kakaku.com page listings."
-    echo "    Check the url in the script and try again."
-    exit 1
-  fi
-  
-  # Kakaku.com uses the Shift_JIS encoding for all their pages. That needs to be converted to UTF-8
-  # Or sed WILL fail to match Japanese characters with the . wildcard.
-  # If you're working on a US site, you can remove these two lines. If it's some other international site,
-  # you will probably have to change the from encoding after the -f tag.
-  iconv -f SHIFT_JIS -t UTF-8 cards$j.sj.html > cards$j.html
-  rm cards$j.sj.html
 done
 
 
