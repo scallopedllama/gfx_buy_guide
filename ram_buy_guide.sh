@@ -130,8 +130,8 @@ do
   fi
   
   # Since there was a result, get the first price and product url from the page
-  price=$(sed -n 's:^.*<span class="price">&yen;\([0-9]*\),*\([0-9]*\) 〜 </span>.*$:\1\2:p' kakaku_search.html)
-  product_url=$(sed -n "s:^.*<a class=\"title\" \+href=\"\(.*\)\">.*$:\1:p" kakaku_search.html)
+  price=$(grep -m 1 "<span class=\"price\">&yen;" kakaku_search.html | sed -n 's:^.*<span class="price">&yen;\([0-9]*\),*\([0-9]*\) 〜 </span>.*$:\1\2:p')
+  product_url=$(grep -m 1 "<a class=\"title\" \+href=\"" kakaku_search.html | sed -n "s:^.*<a class=\"title\" \+href=\"\(.*\)\">.*$:\1:p")
   echo " Price: $price"
   # and dump it out to a tsv file
   echo -e "$part_no_unmodified\t$price\t$product_url" >> kakaku_results.tsv
