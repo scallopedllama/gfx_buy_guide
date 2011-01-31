@@ -89,6 +89,7 @@ do
   if [ $no_results == 0 ]
   then
     echo "no results."
+    rm kakaku_search.html
     continue
   else
 		echo -n "$no_results result."
@@ -132,8 +133,8 @@ do
     no_reviews=$(sed -n "s:.*\"display\:none;\">[0-9]/5</span>(\([0-9]*\)&nbsp;reviews)</a>.*:\1:p" newegg_search.html)
   else
 		# This sed command gets the top result and gets its rating and the url of the review for that product.
-		rating=$(sed -n "s:<a title=\"Rating + \([0-9]\)\" href=\"\(.*\)\" class=\"itemRating\"><span class=\"eggs r3\">&nbsp;</span> (9)</a>:\1:p" newegg_search.html)
-		newegg_url=$(sed -n "s:<a title=\"Rating + \([0-9]\)\" href=\"\(.*\)\" class=\"itemRating\"><span class=\"eggs r3\">&nbsp;</span> (9)</a>:\2:p" newegg_search.html)
+		rating=$(grep -m 1 "<a title=\"Rating +" newegg_search.html | sed -n "s:.*<a title=\"Rating + \([0-9]\)\" href=\".*\" class=\"itemRating\"><span class=\"eggs r[0-9]\">&nbsp;</span>.*:\1:p")
+		newegg_url=$(grep -m 1 "<a title=\"Rating +" newegg_search.html | sed -n "s:.*<a title=\"Rating + [0-9]\" href=\"\(.*\)\" class=\"itemRating\"><span class=\"eggs r[0-9]\">&nbsp;</span>.*:\1:p")
 		no_reviews=$(grep -m 1 "class=\"itemRating\">" newegg_search.html | sed -n "s:.*class=\"itemRating\"><span class=\"eggs r[0-9]\">&nbsp;</span> (\([0-9]*\))</a>.*:\1:p")
   fi
   echo "found with rating of $rating eggs after $no_reviews reviews."
@@ -144,7 +145,6 @@ do
 done
 
 exit 0
-
 # Now on to the mysql business
 # Get the mySql password and username
 read -p "Please enter MySQL Username: " username
@@ -159,9 +159,9 @@ mysql -u$username -p$password -e "USE guide; DROP TABLE kakaku_ram; DROP TABLE n
 echo "ok"
 echo -n "Re-creating old table..."
 mysql -u$usrname -p$password -e "USE guide;
-CREATE TABLE kakaku_ram (part VARCHAR(256), price INT(11), url VARCHAR(256)); 
-
-"
+CREATE TABLE kakaku_ram (part VARCHAR(256), price INT(11), url VARCHAR(256));
+CREATE TABLE newegg_ram (part VARCHAR(256), rating INT(2), reviews INT(11), url VARCHAR(256));
+CREATE TABLE qvl_ram (part VARCHAR(256), maker VARCHAR(128), size VARCHAR(56), sidedness VARCHAR(2), chip_brand VARCHAR(128), chip_no VARCHAR(256), timing VARCHAR(256), dimm_1 BOOLEAN, dimm_2 BOOLEAN, dimm_4 BOOLEAN);"
 echo "ok"
 echo -n "Adding data..."
 
