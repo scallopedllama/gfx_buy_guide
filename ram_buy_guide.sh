@@ -72,16 +72,35 @@ echo "Checking RAM Modules..."
 for (( i=1; i<=$ram_entries; i++ ))
 do
 	# Get ram module part no to search for
-	part_no=$(sed -n "$i p" qvl.tsv| awk -v FS="\t" '{print($2)}' | sed "s:(.*)::g" | sed "s:Ver.\..::g" | sed "s:\..*::g" | sed "s:/:%2F:g" | sed "s: ::g" )
+	part_no_unmodified=$(sed -n "$i p" qvl.tsv| awk -v FS="\t" '{print($2)}')
+	part_no=$(echo "$part_no_unmodified" | sed "s:(.*)::g" | sed "s:Ver.\..::g" | sed "s:\..*::g" | sed "s:/:%2F:g" | sed "s: ::g" )
 	
   echo "  Part No: $part_no"
-  #echo -n "    Searching Kakaku.com: "
+  echo -n "    Searching Kakaku.com: "
   
   # Search url for kakaku.com
   #    http://kakaku.com/search_results/?c=&query=$card&category=&minPrice=&maxPrice=&sort=popular&rgb=&shop=&act=Input&l=l&rgbs=
-  #wget -q -O kakaku_search.html "http://kakaku.com/search_results/?c=&query=$part_no&category=&minPrice=&maxPrice=&sort=popular&rgb=&shop=&act=Input&l=l&rgbs="
+  wget -q -O kakaku_search.sj.html "http://kakaku.com/search_results/?c=&query=$part_no&category=&minPrice=&maxPrice=&sort=popular&rgb=&shop=&act=Input&l=l&rgbs="
+  iconv -f SHIFT_JIS -t UTF-8 kakaku_search.sj.html > kakaku_search.html
+  rm kakaku_search.sj.html
   
+  no_results=$(grep -c "<span class=\"price\">" kakaku_search.html)
+  if [ $no_results == 0 ]
+  then
+    echo "no results."
+    continue
+  else
+		echo -n "$no_results result."
+  fi
+  if [ $no_results -gt 1 ]
+  then
+    echo "Note: $part_no returns $no_results results. Only using first result."
+  fi
   
+  price=$(sed -n 's:^.*<span class="price">&yen;\([0-9]*\),*\([0-9]*\) 〜 </span>.*$:\1\2:p' kakaku_search.html)
+  product_url=$(sed -n "s:^.*<a class=\"title\" \+href=\"\(.*\)\">.*$:\1:p" kakaku_search.html)
+  echo " Price: $price"
+  echo -e "$part_no_unmodified\t$price\t$product_url" >> kakaku_results.tsv
   
 done
 
