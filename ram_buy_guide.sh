@@ -84,6 +84,7 @@ do
   iconv -f SHIFT_JIS -t UTF-8 kakaku_search.sj.html > kakaku_search.html
   rm kakaku_search.sj.html
   
+  # See if there was a result and report that to user
   no_results=$(grep -c "<span class=\"price\">" kakaku_search.html)
   if [ $no_results == 0 ]
   then
@@ -97,14 +98,51 @@ do
     echo "Note: $part_no returns $no_results results. Only using first result."
   fi
   
+  # Since there was a result, get the first price and product url from the page
   price=$(sed -n 's:^.*<span class="price">&yen;\([0-9]*\),*\([0-9]*\) 〜 </span>.*$:\1\2:p' kakaku_search.html)
   product_url=$(sed -n "s:^.*<a class=\"title\" \+href=\"\(.*\)\">.*$:\1:p" kakaku_search.html)
   echo " Price: $price"
+  # and dump it out to a tsv file
   echo -e "$part_no_unmodified\t$price\t$product_url" >> kakaku_results.tsv
+  
+  rm kakaku_search.html
+  
+  # Done with kakaku search
+  
+  echo -n "    Searching Newegg.com: "
+  
+  # Newegg search url: http://www.newegg.com/Product/ProductList.aspx?Submit=ENE&DEPA=0&Order=BESTMATCH&Description=$part_no
+  # This can either return a product page, a search with no results, or a search with more than one result
+  newegg_search_url="http://www.newegg.com/Product/ProductList.aspx?Submit=ENE&DEPA=0&Order=BESTMATCH&Description=$part_no"
+  wget -q -O newegg_search.html $newegg_search_url
+  
+  if [ $(grep -c "<h2>Search Tips</h2>" newegg_search.html) -gt 0 ]
+  then
+    echo "no results."
+    continue
+  fi
+  
+  rating=""
+  newegg_url=""
+  if [ $(grep -c "<dd>Item#" newegg_search.html) -gt 0 ]
+  then
+    rating=$(sed -n "s:.*<img class=\"eggs r[0-9] screen\" title=\"\([0-9]\) out of 5 eggs\".*:\1:p" newegg_search.html)
+    newegg_url="$newegg_search_url"
+  else
+		# This sed command gets the top result and gets its rating and the url of the review for that product.
+		rating=$(sed -n "s:<a title=\"Rating + \([0-9]\)\" href=\"\(.*\)\" class=\"itemRating\"><span class=\"eggs r3\">&nbsp;</span> (9)</a>:\1:p" newegg_search.html)
+		newegg_url=$(sed -n "s:<a title=\"Rating + \([0-9]\)\" href=\"\(.*\)\" class=\"itemRating\"><span class=\"eggs r3\">&nbsp;</span> (9)</a>:\2:p" newegg_search.html)
+  fi
+  echo "found with rating of $rating eggs."
+  echo -e "$part_no_unmodified\t$rating\t$newegg_url" >> newegg_results.tsv
+  
+  rm newegg_search.html
   
 done
 
 # Clean up
 #rm qvl.tsv
+#rm kakaku_results.tsv
+#rm newegg_results.tsv
 
 exit 0
