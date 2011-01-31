@@ -28,7 +28,7 @@ then
   echo "The query outputs to a file called ram_data.tsv in the current working directory."
   echo "This file is a tab-separated-value file that is easily imported into any spreadsheet program."
   echo ""
-  echo "You must also have a mysql database configured called 'ram' that you have full privilages on."
+  echo "You must also have a mysql database configured called 'guide' that you have full privilages on."
   exit 1
 fi
 
@@ -124,21 +124,60 @@ do
   
   rating=""
   newegg_url=""
+  no_reviews=""
   if [ $(grep -c "<dd>Item#" newegg_search.html) -gt 0 ]
   then
     rating=$(sed -n "s:.*<img class=\"eggs r[0-9] screen\" title=\"\([0-9]\) out of 5 eggs\".*:\1:p" newegg_search.html)
     newegg_url="$newegg_search_url"
+    no_reviews=$(sed -n "s:.*\"display\:none;\">[0-9]/5</span>(\([0-9]*\)&nbsp;reviews)</a>.*:\1:p" newegg_search.html)
   else
 		# This sed command gets the top result and gets its rating and the url of the review for that product.
 		rating=$(sed -n "s:<a title=\"Rating + \([0-9]\)\" href=\"\(.*\)\" class=\"itemRating\"><span class=\"eggs r3\">&nbsp;</span> (9)</a>:\1:p" newegg_search.html)
 		newegg_url=$(sed -n "s:<a title=\"Rating + \([0-9]\)\" href=\"\(.*\)\" class=\"itemRating\"><span class=\"eggs r3\">&nbsp;</span> (9)</a>:\2:p" newegg_search.html)
+		no_reviews=$(grep -m 1 "class=\"itemRating\">" newegg_search.html | sed -n "s:.*class=\"itemRating\"><span class=\"eggs r[0-9]\">&nbsp;</span> (\([0-9]*\))</a>.*:\1:p")
   fi
-  echo "found with rating of $rating eggs."
-  echo -e "$part_no_unmodified\t$rating\t$newegg_url" >> newegg_results.tsv
+  echo "found with rating of $rating eggs after $no_reviews reviews."
+  echo -e "$part_no_unmodified\t$rating\t$no_reviews\t$newegg_url" >> newegg_results.tsv
   
   rm newegg_search.html
   
 done
+
+exit 0
+
+# Now on to the mysql business
+# Get the mySql password and username
+read -p "Please enter MySQL Username: " username
+stty -echo
+read -p "Please enter MySQL Password: " password; echo
+stty echo
+
+# Now run the relevant commands.
+echo ""
+echo -n "Dropping old tables..."
+mysql -u$username -p$password -e "USE guide; DROP TABLE kakaku_ram; DROP TABLE newegg_ram; DROP TABLE qvl_ram;" > /dev/null 2>&1
+echo "ok"
+echo -n "Re-creating old table..."
+mysql -u$usrname -p$password -e "USE guide;
+CREATE TABLE kakaku_ram (part VARCHAR(256), price INT(11), url VARCHAR(256)); 
+
+"
+echo "ok"
+echo -n "Adding data..."
+
+echo "ok"
+echo -n "Running query..."
+
+echo "ok"
+
+echo ""
+echo "All done."
+echo "The joined data has been dumped into the file called card_data.tsv."
+echo "It's a tab-separated-value file that can easily be pasted into a spreadsheet to get a better look at the data."
+echo "All intermediate files including the original html data has been deleted. The MySQL database tables remain."
+
+
+
 
 # Clean up
 #rm qvl.tsv
