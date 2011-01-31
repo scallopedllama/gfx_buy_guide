@@ -126,7 +126,9 @@ do
   fi
   if [ $no_results -gt 1 ]
   then
+    echo ""
     echo "Note: $part_no returns $no_results results. Only using first result."
+    echo -n "   "
   fi
   
   # Since there was a result, get the first price and product url from the page
