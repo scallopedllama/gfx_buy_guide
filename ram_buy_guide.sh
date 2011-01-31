@@ -66,20 +66,26 @@ then
   echo "         Got $ram_entries entries. Continuing anyway."
 fi
 
-exit 0
-
-echo "Searching kakaku.com for RAM modules..."
+echo "Checking RAM Modules..."
 
 # Loop through getting all the kakaku page listings
 for (( i=1; i<=$ram_entries; i++ ))
 do
+	# Get ram module part no to search for
+	part_no=$(sed -n "$i p" qvl.tsv| awk -v FS="\t" '{print($2)}' | sed "s:(.*)::g" | sed "s:Ver.\..::g" | sed "s:\..*::g" | sed "s:/:%2F:g" | sed "s: ::g" )
+	
+  echo "  Part No: $part_no"
+  #echo -n "    Searching Kakaku.com: "
+  
   # Search url for kakaku.com
   #    http://kakaku.com/search_results/?c=&query=$card&category=&minPrice=&maxPrice=&sort=popular&rgb=&shop=&act=Input&l=l&rgbs=
-  echo -n "  $Part No: "
+  #wget -q -O kakaku_search.html "http://kakaku.com/search_results/?c=&query=$part_no&category=&minPrice=&maxPrice=&sort=popular&rgb=&shop=&act=Input&l=l&rgbs="
+  
+  
   
 done
 
 # Clean up
-rm qvl.tsv
+#rm qvl.tsv
 
 exit 0
