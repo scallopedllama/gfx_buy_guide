@@ -144,9 +144,9 @@ do
   
 done
 
-$qvl_entries=`wc -l qvl.tsv | awk '{print($1)}'`
-$kakaku_entries=`wc -l kakaku_results.tsv | awk '{print($1)}'`
-$newegg_entries=`wc -l newegg_results.tsv | awk '{print($1)}'`
+qvl_entries=`wc -l qvl.tsv | awk '{print($1)}'`
+kakaku_entries=`wc -l kakaku_results.tsv | awk '{print($1)}'`
+newegg_entries=`wc -l newegg_results.tsv | awk '{print($1)}'`
 
 echo ""
 echo "Finished Searching for $qvl_entries products from the RAM QVL."
@@ -166,7 +166,7 @@ mysql -u$username -p$password -e "USE guide;
 	DROP TABLE kakaku_ram; DROP TABLE newegg_ram; DROP TABLE qvl_ram;" > /dev/null 2>&1
 echo "ok"
 echo -n "Re-creating old table..."
-mysql -u$usrname -p$password -e "USE guide;
+mysql -u$username -p$password -e "USE guide;
 	CREATE TABLE kakaku_ram (part VARCHAR(256), price INT(11), url VARCHAR(256));
 	CREATE TABLE newegg_ram (part VARCHAR(256), rating INT(2), reviews INT(11), url VARCHAR(256));
 	CREATE TABLE qvl_ram (maker VARCHAR(128), part VARCHAR(256), size VARCHAR(56), sidedness VARCHAR(2), chip_brand VARCHAR(128), chip_no VARCHAR(256), timing VARCHAR(256), voltage VARCHAR(256), dimm_1 CHAR(1) DEFAULT \"F\", dimm_2 CHAR(1) DEFAULT \"F\", dimm_4 CHAR(1) DEFAULT \"F\");"
@@ -178,17 +178,15 @@ mysql -u$username -p$password -e "USE guide;
 	LOAD DATA LOCAL INFILE \"newegg_results.tsv\" INTO TABLE newegg_ram;"
 echo "ok"
 echo -n "Running query..."
-
+mysql -u$username -p$password -e "USE guide;
+  SELECT q.maker, q.part, q.size, k.price, n.rating, n.reviews, q.dimm_1, q.dimm_2, q.dimm_4, k.url, n.url FROM qvl_ram q RIGHT JOIN kakaku_ram k ON q.part=k.part INNER JOIN newegg_ram n ON k.part=n.part ORDER BY k.price ASC;" > ram_data.tsv
 echo "ok"
 
 echo ""
 echo "All done."
-echo "The joined data has been dumped into the file called card_data.tsv."
+echo "The joined data has been dumped into the file called ram_data.tsv."
 echo "It's a tab-separated-value file that can easily be pasted into a spreadsheet to get a better look at the data."
 echo "All intermediate files including the original html data has been deleted. The MySQL database tables remain."
-
-
-
 
 # Clean up
 rm qvl.tsv
