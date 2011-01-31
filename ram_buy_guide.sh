@@ -81,7 +81,7 @@ do
   # Search url for kakaku.com
   #    http://kakaku.com/search_results/?c=&query=$card&category=&minPrice=&maxPrice=&sort=popular&rgb=&shop=&act=Input&l=l&rgbs=
   wget -q -O kakaku_search.sj.html "http://kakaku.com/search_results/?c=&query=$part_no&category=&minPrice=&maxPrice=&sort=popular&rgb=&shop=&act=Input&l=l&rgbs="
-  iconv -f SHIFT_JIS -t UTF-8 kakaku_search.sj.html > kakaku_search.html
+  iconv -c -s -f SHIFT_JIS -t UTF-8 kakaku_search.sj.html > kakaku_search.html
   rm kakaku_search.sj.html
   
   # See if there was a result and report that to user
