@@ -56,16 +56,36 @@ type -P pdftotext &>/dev/null || {
 pdftotext -layout qvl.pdf qvl.txt
 echo "ok."
 
-# This will use sed to parse the qvl list.
-# It matches on a very specific pattern and replaces the whole line with a simple one that has the format
-#        1              2         3        4        5         6          7        8        9
-#    Manufacturer    Part No.    Size    SS/DS    Timing    Voltage    1Dimm    2Dimm    4Dimm
-# Where each item has a tab between it. This data can be easily loaded into mysql with the following command:
-#    LOAD DATA LOCAL INFILE "qvl.tsv" INTO TABLE qvl;
-# This command will probably not need to be modified.
-# That last 'g' is needed to ensure it does all replacements. The last 'p' combines with the -n option to ONLY print the lines that have been changed ONCE.
-# Example line:      A-DATA                        AD31600G001GMU                           1GB             SS             -                     -                       9-9-9-24           1.65~1.85       ●       ●
-grep "^  \+.*  \+.*  \+[1-9]GB" qvl.txt | sed "s:^  \+::g" | sed "s:  \+:\t:g" > qvl.tsv
+# This will use sed to clean up the qvl list.
+# It starts by removing empty lines and then puts a '-' in all empty dimm fields
+sed '/^$/d' qvl.txt | sed 's/^\(.\{190\}\) /\1-/' | sed 's/^\(.\{199\}\) /\1-/' | sed "s:^  \+::g" | sed "s:  \+:,:g" > qvl.p.ssv
+
+echo -n "Adding Ram Speeds to list: "
+for (( i=1; i<=`wc -l qvl.p.ssv | awk '{print($1)}'`; i++ ))
+do
+	line=$(sed -n "$i p" qvl.p.ssv)
+	
+	# See if this is the start of a new speed section
+	if [ `echo $line | grep -c "^DDR3 [0-9]* Qualified Vendors List (QVL)$"` -gt 0 ]
+	then
+	  speed=$(echo $line | sed 's/^DDR3 \([0-9]*\) Qualified Vendors List (QVL)$/\1/')
+	  continue
+	fi
+	
+	# Must not be, see if it's an entry
+	if [ `echo $line | grep -c "^.*,.*,[0-9]GB"` -gt 0 ]
+	then
+	  echo -e "$speed,$line" >> qvl.ssv
+	fi
+done
+
+# Remove all groups of spaces longer than 2 spaces long, replace those double spaces with tabs
+sed "s:,:\t:g" qvl.ssv > qvl.tsv
+rm qvl.ssv
+rm qvl.p.ssv
+
+echo "ok."
+
 
 # Make sure there's some data in that file
 ram_entries=`wc -l qvl.tsv | awk '{print($1)}'`
@@ -82,7 +102,7 @@ echo "Checking RAM Modules..."
 for (( i=1; i<=$ram_entries; i++ ))
 do
 	# Get ram module part no to search for
-	part_no_unmodified=$(sed -n "$i p" qvl.tsv| awk -v FS="\t" '{print($2)}')
+	part_no_unmodified=$(sed -n "$i p" qvl.tsv| awk -v FS="\t" '{print($3)}')
 	part_no=$(echo "$part_no_unmodified" | sed "s:(.*)::g" | sed "s:Ver.\..::g" | sed "s:\..*::g" | sed "s:/:%2F:g" | sed "s: ::g" )
 	
   echo "  Part No: $part_no"
@@ -179,7 +199,7 @@ echo -n "Re-creating old table..."
 mysql -u$username -p$password -e "USE guide;
 	CREATE TABLE kakaku_ram (part VARCHAR(256), price INT(11), url VARCHAR(256));
 	CREATE TABLE newegg_ram (part VARCHAR(256), rating INT(2), reviews INT(11), url VARCHAR(256));
-	CREATE TABLE qvl_ram (maker VARCHAR(128), part VARCHAR(256), size VARCHAR(56), sidedness VARCHAR(2), chip_brand VARCHAR(128), chip_no VARCHAR(256), timing VARCHAR(256), voltage VARCHAR(256), dimm_1 CHAR(1) DEFAULT \"F\", dimm_2 CHAR(1) DEFAULT \"F\", dimm_4 CHAR(1) DEFAULT \"F\");"
+	CREATE TABLE qvl_ram (speed INT(11), maker VARCHAR(128), part VARCHAR(256), size VARCHAR(56), sidedness VARCHAR(2), chip_brand VARCHAR(128), chip_no VARCHAR(256), timing VARCHAR(256), voltage VARCHAR(256), dimm_1 CHAR(1) DEFAULT \"F\", dimm_2 CHAR(1) DEFAULT \"F\", dimm_4 CHAR(1) DEFAULT \"F\");"
 echo "ok"
 echo -n "Adding data..."
 mysql -u$username -p$password -e "USE guide;
@@ -189,7 +209,7 @@ mysql -u$username -p$password -e "USE guide;
 echo "ok"
 echo -n "Running query..."
 mysql -u$username -p$password -e "USE guide;
-  SELECT q.maker, q.part, q.size, k.price, n.rating, n.reviews, q.dimm_1, q.dimm_2, q.dimm_4, k.url, n.url FROM qvl_ram q RIGHT JOIN kakaku_ram k ON q.part=k.part INNER JOIN newegg_ram n ON k.part=n.part ORDER BY k.price ASC;" > ram_data.tsv
+  SELECT q.maker, q.part, q.size, q.speed, k.price, n.rating, n.reviews, q.dimm_1, q.dimm_2, q.dimm_4, k.url, n.url FROM qvl_ram q RIGHT JOIN kakaku_ram k ON q.part=k.part INNER JOIN newegg_ram n ON k.part=n.part ORDER BY k.price ASC;" > ram_data.tsv
 echo "ok"
 
 echo ""
