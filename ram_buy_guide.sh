@@ -34,17 +34,27 @@ fi
 
 # Check for qvl
 echo -n "Checking for ASUS QVL List: "
-if [ -a "qvl.txt" ]
+if [ -a "qvl.pdf" ]
 then
   echo "ok."
 else
   echo "failed."
   echo "    This script needs a copy of the ASUS QVL list for your mainboard."
   echo "    Go to asus.com and search for your mainboard. Then go to \"Memory Support List\""
-  echo "    and download the memory QVL list. Unzip it, then open it up in okular."
-  echo "    Use okular's export feature to export it as a plain txt file and call it qvl.txt"
+  echo "    and download the memory QVL list. Unzip it, and rename the file to qvl.pdf"
   exit 1
 fi
+
+# Convert the qvl
+echo -n "Converting QVL List to text: "
+type -P pdftotext &>/dev/null || {
+  echo "failed."
+  echo "    This script requires the pdftotext utility to be installed."
+  echo "    Aborting." >&2;
+  exit 1;
+}
+pdftotext -layout qvl.pdf qvl.txt
+echo "ok."
 
 # This will use sed to parse the qvl list.
 # It matches on a very specific pattern and replaces the whole line with a simple one that has the format
