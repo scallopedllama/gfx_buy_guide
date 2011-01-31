@@ -55,7 +55,7 @@ fi
 # This command will probably not need to be modified.
 # That last 'g' is needed to ensure it does all replacements. The last 'p' combines with the -n option to ONLY print the lines that have been changed ONCE.
 # Example line:      A-DATA                        AD31600G001GMU                           1GB             SS             -                     -                       9-9-9-24           1.65~1.85       ●       ●
-grep "^  \+.*  \+.*  \+[1-9]GB" qvl.txt | sed "s:^  \+::g" | sed "s:  \+:\t:g" | grep "^" > qvl.tsv
+grep "^  \+.*  \+.*  \+[1-9]GB" qvl.txt | sed "s:^  \+::g" | sed "s:  \+:\t:g" > qvl.tsv
 
 # Make sure there's some data in that file
 ram_entries=`wc -l qvl.tsv | awk '{print($1)}'`
@@ -144,7 +144,14 @@ do
   
 done
 
-exit 0
+$qvl_entries=`wc -l qvl.tsv | awk '{print($1)}'`
+$kakaku_entries=`wc -l kakaku_results.tsv | awk '{print($1)}'`
+$newegg_entries=`wc -l newegg_results.tsv | awk '{print($1)}'`
+
+echo ""
+echo "Finished Searching for $qvl_entries products from the RAM QVL."
+echo "Found $kakaku_entries entries available at Kakaku.com with $newegg_entries entries also found at Newegg."
+
 # Now on to the mysql business
 # Get the mySql password and username
 read -p "Please enter MySQL Username: " username
@@ -155,16 +162,20 @@ stty echo
 # Now run the relevant commands.
 echo ""
 echo -n "Dropping old tables..."
-mysql -u$username -p$password -e "USE guide; DROP TABLE kakaku_ram; DROP TABLE newegg_ram; DROP TABLE qvl_ram;" > /dev/null 2>&1
+mysql -u$username -p$password -e "USE guide; 
+	DROP TABLE kakaku_ram; DROP TABLE newegg_ram; DROP TABLE qvl_ram;" > /dev/null 2>&1
 echo "ok"
 echo -n "Re-creating old table..."
 mysql -u$usrname -p$password -e "USE guide;
-CREATE TABLE kakaku_ram (part VARCHAR(256), price INT(11), url VARCHAR(256));
-CREATE TABLE newegg_ram (part VARCHAR(256), rating INT(2), reviews INT(11), url VARCHAR(256));
-CREATE TABLE qvl_ram (part VARCHAR(256), maker VARCHAR(128), size VARCHAR(56), sidedness VARCHAR(2), chip_brand VARCHAR(128), chip_no VARCHAR(256), timing VARCHAR(256), dimm_1 BOOLEAN, dimm_2 BOOLEAN, dimm_4 BOOLEAN);"
+	CREATE TABLE kakaku_ram (part VARCHAR(256), price INT(11), url VARCHAR(256));
+	CREATE TABLE newegg_ram (part VARCHAR(256), rating INT(2), reviews INT(11), url VARCHAR(256));
+	CREATE TABLE qvl_ram (maker VARCHAR(128), part VARCHAR(256), size VARCHAR(56), sidedness VARCHAR(2), chip_brand VARCHAR(128), chip_no VARCHAR(256), timing VARCHAR(256), voltage VARCHAR(256), dimm_1 CHAR(1) DEFAULT \"F\", dimm_2 CHAR(1) DEFAULT \"F\", dimm_4 CHAR(1) DEFAULT \"F\");"
 echo "ok"
 echo -n "Adding data..."
-
+mysql -u$username -p$password -e "USE guide;
+	LOAD DATA LOCAL INFILE \"qvl.tsv\" INTO TABLE qvl_ram;
+	LOAD DATA LOCAL INFILE \"kakaku_results.tsv\" INTO TABLE kakaku_ram;
+	LOAD DATA LOCAL INFILE \"newegg_results.tsv\" INTO TABLE newegg_ram;"
 echo "ok"
 echo -n "Running query..."
 
@@ -180,8 +191,8 @@ echo "All intermediate files including the original html data has been deleted. 
 
 
 # Clean up
-#rm qvl.tsv
-#rm kakaku_results.tsv
-#rm newegg_results.tsv
+rm qvl.tsv
+rm kakaku_results.tsv
+rm newegg_results.tsv
 
 exit 0
