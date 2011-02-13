@@ -154,10 +154,6 @@ do
 
 done
 
-rm kakaku.tsv
-rm search.p??.html
-exit 0
-
 
 # Get the mySql password and username
 read -p "Please enter MySQL Username: " username
@@ -168,31 +164,39 @@ stty echo
 # Now run the relevant commands.
 echo ""
 echo -n "Dropping old tables..."
-mysql -u$username -p$password -e "USE gpu; DROP TABLE benchmarks; DROP TABLE cards;" > /dev/null 2>&1
+mysql -u$username -p$password -e "USE guide;
+  DROP TABLE kakaku_search; DROP TABLE newegg_search;" > /dev/null 2>&1
 echo "ok"
 echo -n "Re-creating old table..."
-# Look at MySQL cheat sheets to understand what the particualrs of the fields are. You may need to modify the table descriptions to match the data you got from your retailer.
-mysql -u$username -p$password -e "USE gpu; CREATE TABLE benchmarks (rank INT(6), gpu VARCHAR(256), score INT (11)); CREATE TABLE cards (name VARCHAR(256), price INT(11), gpu VARCHAR(256), ram_type VARCHAR(26), ram VARCHAR(26), outputs VARCHAR(256));"
+# kakaku.tsv: manufacturer   model   price   score   #reviews   Power_rating   size   url
+# newegg.tsv: model    rating    reviews    url
+mysql -u$username -p$password -e "USE guide;
+  CREATE TABLE kakaku_search (manufacturer VARCHAR(256), model VARCHAR(256), price INT(11), rating INT(2), reviews INT(11), power_rating VARCHAR(7), size VARCHAR(126), url VARCHAR(256));
+  CREATE TABLE newegg_search (model VARCHAR(256), rating INT(2), reviews INT(11), url VARCHAR(256));"
 echo "ok"
 echo -n "Adding data..."
-# Shouldn't need to modify this at all
-mysql -u$username -p$password -e "USE gpu; LOAD DATA LOCAL INFILE \"benchmarks.tsv\" INTO TABLE benchmarks; LOAD DATA LOCAL INFILE \"cards.tsv\" INTO TABLE cards;"
+mysql -u$username -p$password -e "USE guide;
+  LOAD DATA LOCAL INFILE \"kakaku.tsv\" INTO TABLE kakaku_search;
+  LOAD DATA LOCAL INFILE \"newegg_results.tsv\" INTO TABLE newegg_search;"
 echo "ok"
 echo -n "Running query..."
-# The important bit on this query is that it joins the gpu fields. You can change what it selects but make sure you have the INNER JOIN intact.
-mysql -u$username -p$password -e "USE gpu; SELECT c.name, c.gpu, c.price, b.rank, b.score, c.ram_type, c.ram, c.outputs FROM cards c INNER JOIN benchmarks b ON c.gpu=b.gpu ORDER BY b.rank, price ASC;" > card_data.tsv
+mysql -u$username -p$password -e "USE guide;
+  SELECT k.manufacturer, k.model, k.price, k.rating AS kakaku_rating, k.reviews AS kakaku_reviews, k.power_rating, n.rating AS newegg_rating, n.reviews AS newegg_reviews, k.url AS kakaku_url, n.url AS newegg_url
+  FROM kakaku_search k
+  LEFT JOIN newegg_search n
+  ON k.model=n.model
+  ORDER BY k.price ASC;" > search_data.tsv
 echo "ok"
 
 echo ""
 echo "All done."
-echo "The joined data has been dumped into the file called card_data.tsv."
+echo "The joined data has been dumped into the file called search_data.tsv."
 echo "It's a tab-separated-value file that can easily be pasted into a spreadsheet to get a better look at the data."
 echo "All intermediate files including the original html data has been deleted. The MySQL database tables remain."
 
 # Clean everything up
-rm benchmarks.html
-rm benchmarks.tsv
-rm cards??.html
-rm cards.tsv
+rm kakaku.tsv
+rm search.p??.html
+rm newegg_results.tsv
 
 exit 0
