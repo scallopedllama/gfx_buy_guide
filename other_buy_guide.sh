@@ -202,5 +202,6 @@ echo "All intermediate files including the original html data has been deleted. 
 rm kakaku.tsv
 rm search.p??.html
 rm newegg_results.tsv
+rm newegg_search.html
 
 exit 0
