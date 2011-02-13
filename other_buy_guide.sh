@@ -106,8 +106,8 @@ do
   # Parsing for Hard Drives
   # 1: Manufacturer, 2: url, 3: model, 4: price1, 5: price2, 6: size, 7: speed, 8: cache size
   #          ..<td class="item">   MFGR <p><a href="    URL "><strong> MODEL</strong></a></p></td><td class=\"td-price\"><a href=..>&#165;  PRICE1  , PRICE2    </a><br><span>..</span></td><td>..</td><td>..</td><td>..</td><td>..<br><a href=..>..</a></td><td><a href=..>..</a></td><td>..</td><td class=\"select\">..</td><td> SIZE &nbsp;</td><td>SPEED &nbsp;</td><td> CACHE&nbsp;</td><td>&nbsp;</td><td class=\"end\">..</td></tr>
-  sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=\"\(.*\)\"><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*\),*\([0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br><a href=.*>.*</a></td><td><a href=.*>.*</a></td><td>.*</td><td class=\"select\">.*</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>&nbsp;</td><td class=\"end\">.*</td></tr>:\1\t\3\t\4\5\t\6\t\7\t\8\t\2:gp" search.p$j.html >> kakaku.tsv
-
+  #          ..<td class="item">WESTERN <p><a href="        "><strong>      </strong></a></p></td><td class=\"td-price\"><a href=..>&#165;          ,           </a><br><span>..</span></td><td>..</td><td>..</td><td>..</td><td>..<br><a href=..>..</a></td><td><a href=..>..</a></td><td>..</td><td class=\"select\">..</td><td>      &nbsp;</td><td>      &nbsp;</td><td>      &nbsp;</td><td>  &nbsp;</td><td class=\"end\">..</td></tr>
+  sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=\"\(.*\)\"><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*\),*\([0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br><a href=.*>.*</a></td><td><a href=.*>.*</a></td><td>.*</td><td class=\"select\">.*</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>.*&nbsp;</td><td class=\"end\">.*</td></tr>:\1\t\3\t\4\5\t\6\t\7\t\8\t\2:gp" search.p$j.html >> kakaku.tsv
 done
 
 # make sure it has a reasonable number of entries
@@ -126,10 +126,16 @@ fi
 for (( i=1; i<=$search_entries; i++ ))
 do
   part_no_unmodified=$(sed -n "$i p" kakaku.tsv| awk -v FS="\t" '{print($2)}')
+
+  # Part number modifications for PSU
   # The part number we want to search for on newegg is the LAST word in the string that contains a '-' character.
   # Some parts have somthing like INFINITI-JC in the first word and EIN720AWT-JC in the second.
   # First we get the last word with a - in it, Account for the possibility that the first word had the -, then remove preceeding words if the last one is 4 or more characters, remove any /whatever from the end, and any (whatever) from the end
-  part_no=$(echo "$part_no_unmodified" | sed "s:.* \([^ ]*-[^ ]*\) *[^-]*$:\1:" | sed "s:^\([^ ]*-[^ ]*\) .*$:\1:" | sed "s:^[^-]* \([^ ][^ ][^ ][^ W][^ ]*\)$:\1:" | sed "s:^\(.*\)/.*$:\1:" | sed "s:^\(.*\)(.*)$:\1:")
+  #part_no=$(echo "$part_no_unmodified" | sed "s:.* \([^ ]*-[^ ]*\) *[^-]*$:\1:" | sed "s:^\([^ ]*-[^ ]*\) .*$:\1:" | sed "s:^[^-]* \([^ ][^ ][^ ][^ W][^ ]*\)$:\1:" | sed "s:^\(.*\)/.*$:\1:" | sed "s:^\(.*\)(.*)$:\1:")
+
+  # Part number modifications for HDD
+  # The part number we want is always just the first word here with any /junk or (junk) removed
+  part_no=$(echo "$part_no_unmodified" | sed "s:\([^ ]*\) .*:\1:" | sed "s:^\(.*\)/.*$:\1:" | sed "s:^\(.*\)(.*)$:\1:")
 
   echo -n "  Searching for $part_no on Newegg.com: "
 
