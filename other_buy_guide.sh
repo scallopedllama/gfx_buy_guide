@@ -181,12 +181,16 @@ mysql -u$username -p$password -e "USE guide;
 echo "ok"
 echo -n "Running query..."
 mysql -u$username -p$password -e "USE guide;
-  SELECT k.manufacturer, k.model, k.price, k.power_rating, n.rating AS newegg_rating, n.reviews AS newegg_reviews, k.url AS kakaku_url, n.url AS newegg_url
+  SELECT k.manufacturer, k.model, k.price, k.power_rating, n.rating, n.reviews, k.url AS kakaku_url, n.url AS newegg_url
   FROM kakaku_search k
   LEFT JOIN newegg_search n
   ON k.model=n.model
-  ORDER BY k.price ASC;" > search_data.tsv
+  ORDER BY k.price ASC;" > search_data.n.tsv
 echo "ok"
+
+# mySQL wrapps the output which is useless to us so look for the string \n\t and replace it  with just a \n
+sed '{:q;N;s/\t\n/\t/g;t q}' search_data.n.tsv > search_data.tsv
+rm search_data.n.tsv
 
 echo ""
 echo "All done."
