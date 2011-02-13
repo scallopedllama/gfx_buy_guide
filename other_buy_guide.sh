@@ -85,62 +85,34 @@ do
   rm search.p$j.sj.html
 done
 
-# This will use sed to parse the relevant benchmark data out of the html of the benchmark.html file.
-# It matches on a very specific pattern and replaces the whole line with a simple one that has the format
-#    Rank   Card  Score
-# Where each item has a tab between it. This data can be easily loaded into mysql with the following command:
-#    LOAD DATA LOCAL INFILE "benchmarks.tsv" INTO TABLE benchmarks;
-# This command will probably not need to be modified.
-# That last 'g' is needed to ensure it does all replacements. The last 'p' combines with the -n option to ONLY print the lines that have been changed ONCE.
-# Example line: <tr><td id="rk1" class="chart">GeForce GTX 580</td><td id="rt1" class="value"><img src="images/bars/bar1.png" width="347" height="10" onMouseOut="HTAD()" onMouseOver="STAD( event, 1, 257 )"/>3,819</td></tr>
-sed -n "s:^<tr><td id=\"rk\([0-9]*\)\" class=\"chart\">\(.*\)</td><td id=\"rt.*\" class=\"value\"><img src=\".*\" width=\"[0-9]*\" height=\"[0-9]*\" onMouseOut=\".*\" onMouseOver=\".*\"/>\([0-9]*\),*\([0-9]*\)</td></tr>$:\1\t\2\t\3\4:pg" benchmarks.html > benchmarks.tsv
-
-# Make sure there's some data in that file
-benchmark_entries=`wc -l benchmarks.tsv | awk '{print($1)}'`
-if [ $benchmark_entries -lt 50 ]
-then
-  echo "Warning: The processed benchmark file gave fewer than 50 entries for the database."
-  echo "         This may be because passmark changed their site layout and the sed regex doesn't work anymore."
-  echo "         Got $benchmark_entries entries. Continuing anyway."
-fi
-
 
 # This will use sed to parse the relevant data out of each of the html files for the kakaku listings.
 # If you've never used sed before, it's probably a good idea to go look at a tutorial but here is the jist of what we're doing.
 # Get an example line that contains ONE listing from the results page.
-# Kakaku.com example line: "...<td class="item">INNOVISION<p><a href="http://kakaku.com/item/K0000166014/"><strong>Inno3D Geforce 9400GT [PCIExp 1GB]</strong></a></p></td><td class="td-price select"><a href="http://kakaku.com/item/K0000166014/">&#165;5,980</a><br><span>PC-IDEA</span></td><td>1店舗</td><td>382位</td><td>530位</td><td>-<br><a href="http://review.kakaku.com/review/K0000166014/">(0件)</a></td><td><a href="http://bbs.kakaku.com/bbs/K0000166014/">0件</a></td><td>-</td><td>10/11/10</td><td>PCIExp 16X&nbsp;</td><td>NVIDIA<br>GeForce 9400 GT&nbsp;</td><td>GDDR2<br>1024MB&nbsp;</td><td class="end">D-SUBx1<br>DVIx1&nbsp;</td></tr>"
-# The general sed command is 'sed -n "s:[MATCH]:[REPLACE]:pg" [INPUT FILE] > [OUTPUT FILE]
-# This command will only print a line if it has a match (because of the -n option and the p option) and will check every line in the file (because of the g option).
-# [MATCH] Is a generalized string that you're looking for. ^ matches the start of the line, $ matches the end. Replace text with .*, numbers with [0-9]*, and wrap the information you want with \( and /). Escape all you're "s.
-# [REPLACE] is the string you want to replace all that was match with. It'll be like \1\t\2\t\3\t\4. Each \# refers to the #th block of text you wrapped in \( and \). the \t is a tab. Space your fields out with \t so MySQL will be happy.
-# 1: manufacturer, 2: model, 3: price, 4: price pt 2, 5: Chip, 6: ram type, 7: ram amount, 8: outputs
+# Kakaku.com example line: "...<td class="item">Corsair<p><a href="http://kakaku.com/item/K0000045190/"><strong>CMPSU-850HX</strong></a></p></td><td class="td-price"><a href="http://kakaku.com/item/K0000045190/">&#165;15,999</a><br><span>アクロス</span></td><td>25店舗</td><td>22位</td><td>31位</td><td class="select">4.74<br><a href="http://review.kakaku.com/review/K0000045190/">(17件)</a></td><td><a href="http://bbs.kakaku.com/bbs/K0000045190/">131件</a></td><td>-</td><td>09/07/07</td><td>850W&nbsp;</td><td>ATX/EPS&nbsp;</td><td>150x180x86mm&nbsp;</td><td class="end">&yen;18.82&nbsp;</td></tr>"
+# 1: manufacturer, 2: model, 3: price, 4: price pt 2, 5: score, 6: # reviews, 7: Power rating, 8: size
 for (( i=1; i<=$1; i++ ))
 do
   j=$(printf "%02d" "$i")
   # Append to the tsv file
-  sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=.*><strong>\(.*\)</strong></a></p></td><td class=\"td-price select\"><a href=.*>&#165;\([0-9]*\),*\([0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br><a href=.*>.*</a></td><td><a href=.*>.*</a></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br>\(.*\)&nbsp;</td><td>\(.*\)<br>\(.*\)&nbsp;</td><td class=\"end\">\(.*\)&nbsp;</td></tr>:\1 \2\t\3\4\t\5\t\6\t\7\t\8:gp" cards$j.html >> cards.br.tsv
+  # Kak    "...<td class="item">Corsair <p><a href=..><strong>CM..HX</strong></a></p></td><td class=\"td-price\"><a href=..>&#165; Price1   , price2    </a><br><span>..</span></td><td>..</td><td>..</td><td>..</td><td class=\"select\"> score<br><a href=..>( #reviews 件)</a></td><td><a href=..>..</a></td><td>..</td><td>..</td><td>  PWR &nbsp;</td><td> SIZE &nbsp;</td><td>..</td><td class="end">..</td></tr>"
+  sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=.*><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*\),*\([0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td class=\"select\">\(.*\)<br><a href=.*>(\([0-9]*\)件)</a></td><td><a href=.*>.*</a></td><td>.*</td><td>.*</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>.*</td><td class=\"end\">.*</td></tr>:\1\t\2\t\3\4\t\5\t\6\t\7\t\8:gp" search.p$j.html >> kakaku.tsv
 done
 
-# Clean up the kakaku listing a little bit
-# The output listings always have <br>s in them. Let's get rid of them really quick
-sed "s:<br>: :g" cards.br.tsv > cards.n.tsv
-# These two are probably not needed, but just in case.
-sed "s:Geforce:GeForce:g" cards.n.tsv > cards.r.tsv
-sed "s:RADEON:Radeon:g" cards.r.tsv > cards.tsv
-rm cards.*.tsv
-
-#make sure it has a reasonable number of entries
-card_entries=`wc -l cards.tsv | awk '{print($1)}'`
-if [ $card_entries -lt $(($1-1)) ]
+# make sure it has a reasonable number of entries
+search_entries=`wc -l kakaku.tsv | awk '{print($1)}'`
+one_less_pages=$(($1-1))
+if [ $search_entries -lt $(($one_less_pages*40)) ]
 then
   echo "Warning: The processed cards files gave fewer than 40 * ($1 pages - 1) entries."
   echo "         This may be because kakaku.com changed their site layout and the sed regex doesn't work anymore."
-  echo "         Got $card_entries entries. Continuing anyway."
+  echo "         Got $search_entries entries. Continuing anyway."
+else
+  echo "Got $search_entries search results."
 fi
 
-# Status report
-echo "Got $benchmark_entries benchmarks and $card_entries kakaku.com listings."
-echo ""
+exit 0
+
 
 # Get the mySql password and username
 read -p "Please enter MySQL Username: " username
