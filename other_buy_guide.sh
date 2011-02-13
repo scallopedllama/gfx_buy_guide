@@ -188,8 +188,8 @@ mysql -u$username -p$password -e "USE guide;
   ORDER BY k.price ASC;" > search_data.n.tsv
 echo "ok"
 
-# mySQL wrapps the output which is useless to us so look for the string \n\t and replace it  with just a \n
-sed '{:q;N;s/\t\n/\t/g;t q}' search_data.n.tsv > search_data.tsv
+# mySQL wrapps the output with a \r which is useless to us so look for the string \r and replace it with nothing
+sed 's:\r::' search_data.n.tsv > search_data.tsv
 rm search_data.n.tsv
 
 echo ""
