@@ -64,7 +64,11 @@ do
   # The text after the -O flag indicates the output so don't change that, just change the url that follows.
   # Take the url you got from your search and put it here and replace only the part that changes with a $j.
   # It should work just fine so long as you changed the printf above correctly.
-  wget -q -O search.p$j.sj.html http://kakaku.com/pc/power-supply/ma_0/r20$j/s1=700-900//
+
+  # Search for power supplies
+  #wget -q -O search.p$j.sj.html http://kakaku.com/pc/power-supply/ma_0/r20$j/s1=700-900//
+  # Search for hard drives
+  wget -q -O search.p$j.sj.html http://kakaku.com/pc/hdd-35inch/ma_0/e20$j/s1=1000/s3=1/
 
   # Make sure it's there
   if [ -a "search.p$j.sj.html" ]
@@ -90,13 +94,20 @@ done
 # If you've never used sed before, it's probably a good idea to go look at a tutorial but here is the jist of what we're doing.
 # Get an example line that contains ONE listing from the results page.
 # Kakaku.com example line: "...<td class="item">Corsair<p><a href="http://kakaku.com/item/K0000045190/"><strong>CMPSU-850HX</strong></a></p></td><td class="td-price"><a href="http://kakaku.com/item/K0000045190/">&#165;15,999</a><br><span>アクロス</span></td><td>25店舗</td><td>22位</td><td>31位</td><td class="select">4.74<br><a href="http://review.kakaku.com/review/K0000045190/">(17件)</a></td><td><a href="http://bbs.kakaku.com/bbs/K0000045190/">131件</a></td><td>-</td><td>09/07/07</td><td>850W&nbsp;</td><td>ATX/EPS&nbsp;</td><td>150x180x86mm&nbsp;</td><td class="end">&yen;18.82&nbsp;</td></tr>"
-# 1: manufacturer, 2: url, 3: model, 4: price, 5: price pt 2, 6: score, 7: # reviews, 8: Power rating, 9: size
+
 for (( i=1; i<=$1; i++ ))
 do
   j=$(printf "%02d" "$i")
-  # Append to the tsv file
+  # Parsing for Power Supplies
+  # 1: manufacturer, 2: url, 3: model, 4: price, 5: price pt 2, 6: score, 7: # reviews, 8: Power rating, 9: size
   # Kak    "...<td class="item">Corsair <p><a href="   URL  "><strong>CM..HX</strong></a></p></td><td class=\"td-price\"><a href=..>&#165; Price1   , price2    </a><br><span>..</span></td><td>..</td><td>..</td><td>..</td><td class=\"select\"> score<br><a href=..>( #reviews 件)</a></td><td><a href=..>..</a></td><td>..</td><td>..</td><td>  PWR &nbsp;</td><td> SIZE &nbsp;</td><td>..</td><td class="end">..</td></tr>"
-  sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=\"\(.*\)\"><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*\),*\([0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td class=\"select\">\(.*\)<br><a href=.*>(\([0-9]*\)件)</a></td><td><a href=.*>.*</a></td><td>.*</td><td>.*</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>.*</td><td class=\"end\">.*</td></tr>:\1\t\3\t\4\5\t\6\t\7\t\8\t\9\t\2:gp" search.p$j.html >> kakaku.tsv
+  #sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=\"\(.*\)\"><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*\),*\([0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td class=\"select\">\(.*\)<br><a href=.*>(\([0-9]*\)件)</a></td><td><a href=.*>.*</a></td><td>.*</td><td>.*</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>.*</td><td class=\"end\">.*</td></tr>:\1\t\3\t\4\5\t\6\t\7\t\8\t\9\t\2:gp" search.p$j.html >> kakaku.tsv
+
+  # Parsing for Hard Drives
+  # 1: Manufacturer, 2: url, 3: model, 4: price1, 5: price2, 6: size, 7: speed, 8: cache size
+  #          ..<td class="item">   MFGR <p><a href="    URL "><strong> MODEL</strong></a></p></td><td class=\"td-price\"><a href=..>&#165;  PRICE1  , PRICE2    </a><br><span>..</span></td><td>..</td><td>..</td><td>..</td><td>..<br><a href=..>..</a></td><td><a href=..>..</a></td><td>..</td><td class=\"select\">..</td><td> SIZE &nbsp;</td><td>SPEED &nbsp;</td><td> CACHE&nbsp;</td><td>&nbsp;</td><td class=\"end\">..</td></tr>
+  sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=\"\(.*\)\"><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*\),*\([0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br><a href=.*>.*</a></td><td><a href=.*>.*</a></td><td>.*</td><td class=\"select\">.*</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>&nbsp;</td><td class=\"end\">.*</td></tr>:\1\t\3\t\4\5\t\6\t\7\t\8\t\2:gp" search.p$j.html >> kakaku.tsv
+
 done
 
 # make sure it has a reasonable number of entries
