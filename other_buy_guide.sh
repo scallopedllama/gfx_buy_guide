@@ -181,7 +181,7 @@ mysql -u$username -p$password -e "USE guide;
 echo "ok"
 echo -n "Running query..."
 mysql -u$username -p$password -e "USE guide;
-  SELECT k.manufacturer, k.model, k.price, k.rating AS kakaku_rating, k.reviews AS kakaku_reviews, k.power_rating, n.rating AS newegg_rating, n.reviews AS newegg_reviews, k.url AS kakaku_url, n.url AS newegg_url
+  SELECT k.manufacturer, k.model, k.price, k.power_rating, n.rating AS newegg_rating, n.reviews AS newegg_reviews, k.url AS kakaku_url, n.url AS newegg_url
   FROM kakaku_search k
   LEFT JOIN newegg_search n
   ON k.model=n.model
