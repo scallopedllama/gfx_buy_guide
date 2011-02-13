@@ -99,14 +99,13 @@ for (( i=1; i<=$1; i++ ))
 do
   j=$(printf "%02d" "$i")
   # Parsing for Power Supplies
-  # 1: manufacturer, 2: url, 3: model, 4: price, 5: price pt 2, 6: score, 7: # reviews, 8: Power rating, 9: size
-  # Kak    "...<td class="item">Corsair <p><a href="   URL  "><strong>CM..HX</strong></a></p></td><td class=\"td-price\"><a href=..>&#165; Price1   , price2    </a><br><span>..</span></td><td>..</td><td>..</td><td>..</td><td class=\"select\"> score<br><a href=..>( #reviews 件)</a></td><td><a href=..>..</a></td><td>..</td><td>..</td><td>  PWR &nbsp;</td><td> SIZE &nbsp;</td><td>..</td><td class="end">..</td></tr>"
-  #sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=\"\(.*\)\"><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*\),*\([0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td class=\"select\">\(.*\)<br><a href=.*>(\([0-9]*\)件)</a></td><td><a href=.*>.*</a></td><td>.*</td><td>.*</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>.*</td><td class=\"end\">.*</td></tr>:\1\t\3\t\4\5\t\6\t\7\t\8\t\9\t\2:gp" search.p$j.html >> kakaku.tsv
+  # 1: manufacturer, 2: url, 3: model, 4: price1, 5: price2, 6: Power rating, 7: size
+  # Kak     "...<td class="item">Corsair <p><a href="   URL  "><strong>CM..HX</strong></a></p></td><td class=\"td-price\"><a href=..>&#165; Price1   , price2    </a><br><span>..</span></td><td>..</td><td>..</td><td>..</td><td class=\"select\">.*<br><a href=..>.*</a></td><td><a href=..>..</a></td><td>..</td><td>..</td><td>  PWR &nbsp;</td><td> SIZE &nbsp;</td><td>..</td><td class="end">..</td></tr>"
+  #sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=\"\(.*\)\"><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*\),*\([0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td class=\"select\">.*<br><a href=.*>.*</a></td><td><a href=.*>.*</a></td><td>.*</td><td>.*</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>.*</td><td class=\"end\">.*</td></tr>:\1\t\3\t\4\5\t\6\t\7\t\t\2:gp" search.p$j.html >> kakaku.tsv
 
   # Parsing for Hard Drives
-  # 1: Manufacturer, 2: url, 3: model, 4: price1, 5: price2, 6: size, 7: speed, 8: cache size
-  #          ..<td class="item">   MFGR <p><a href="    URL "><strong> MODEL</strong></a></p></td><td class=\"td-price\"><a href=..>&#165;  PRICE1  , PRICE2    </a><br><span>..</span></td><td>..</td><td>..</td><td>..</td><td>..<br><a href=..>..</a></td><td><a href=..>..</a></td><td>..</td><td class=\"select\">..</td><td> SIZE &nbsp;</td><td>SPEED &nbsp;</td><td> CACHE&nbsp;</td><td>&nbsp;</td><td class=\"end\">..</td></tr>
-  #          ..<td class="item">WESTERN <p><a href="        "><strong>      </strong></a></p></td><td class=\"td-price\"><a href=..>&#165;          ,           </a><br><span>..</span></td><td>..</td><td>..</td><td>..</td><td>..<br><a href=..>..</a></td><td><a href=..>..</a></td><td>..</td><td class=\"select\">..</td><td>      &nbsp;</td><td>      &nbsp;</td><td>      &nbsp;</td><td>  &nbsp;</td><td class=\"end\">..</td></tr>
+  # 1: Manufacturer, 2: url, 3: model, 4: price1, 5: price2, 6: size, 7: speed, 8 cache size
+  #            <td class="item">  MGFR  <p><a href=\"  URL \"><strong> MODEL</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;  PRICE1  ,  PRICE2   </a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br><a href=.*>.*</a></td><td><a href=.*>.*</a></td><td>.*</td><td class=\"select\">.*</td><td> SIZE &nbsp;</td><td> SPEED&nbsp;</td><td>CACHE &nbsp;</td><td>.*&nbsp;</td><td class=\"end\">.*</td></tr>
   sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=\"\(.*\)\"><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*\),*\([0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br><a href=.*>.*</a></td><td><a href=.*>.*</a></td><td>.*</td><td class=\"select\">.*</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>\(.*\)&nbsp;</td><td>.*&nbsp;</td><td class=\"end\">.*</td></tr>:\1\t\3\t\4\5\t\6\t\7\t\8\t\2:gp" search.p$j.html >> kakaku.tsv
 done
 
@@ -185,10 +184,10 @@ mysql -u$username -p$password -e "USE guide;
   DROP TABLE kakaku_search; DROP TABLE newegg_search;" > /dev/null 2>&1
 echo "ok"
 echo -n "Re-creating old table..."
-# kakaku.tsv: manufacturer   model   price   score   #reviews   Power_rating   size   url
+# kakaku.tsv: Manufacturer, model, price, size, speed, cache size, url
 # newegg.tsv: model    rating    reviews    url
 mysql -u$username -p$password -e "USE guide;
-  CREATE TABLE kakaku_search (manufacturer VARCHAR(256), model VARCHAR(256), price INT(11), rating INT(2), reviews INT(11), power_rating VARCHAR(7), size VARCHAR(126), url VARCHAR(256));
+  CREATE TABLE kakaku_search (manufacturer VARCHAR(256), model VARCHAR(256), price INT(11), attrib_1 VARCHAR(126), attrib_2 VARCHAR(126), attrib_3 VARCHAR(126), url VARCHAR(256));
   CREATE TABLE newegg_search (model VARCHAR(256), rating INT(2), reviews INT(11), url VARCHAR(256));"
 echo "ok"
 echo -n "Adding data..."
@@ -198,7 +197,7 @@ mysql -u$username -p$password -e "USE guide;
 echo "ok"
 echo -n "Running query..."
 mysql -u$username -p$password -e "USE guide;
-  SELECT k.manufacturer, k.model, k.price, k.power_rating, n.rating, n.reviews, k.url AS kakaku_url, n.url AS newegg_url
+  SELECT k.manufacturer, k.model, k.price, n.rating, n.reviews, k.attrib_1, k.attrib_2, k.attrib_3, k.url AS kakaku_url, n.url AS newegg_url
   FROM kakaku_search k
   LEFT JOIN newegg_search n
   ON k.model=n.model
@@ -206,7 +205,8 @@ mysql -u$username -p$password -e "USE guide;
 echo "ok"
 
 # mySQL wrapps the output with a \r which is useless to us so look for the string \r and replace it with nothing
-sed 's:\r::' search_data.n.tsv > search_data.tsv
+# While at that, replace all the NULLs with empty strings.
+sed 's:\r::g' search_data.n.tsv | sed 's:NULL::g' > search_data.tsv
 rm search_data.n.tsv
 
 echo ""
