@@ -197,7 +197,7 @@ mysql -u$username -p$password -e "USE guide;
 echo "ok"
 echo -n "Running query..."
 mysql -u$username -p$password -e "USE guide;
-  SELECT k.manufacturer, k.model, k.price, n.rating, n.reviews, k.attrib_1, k.attrib_2, k.attrib_3, k.url AS kakaku_url, n.url AS newegg_url
+  SELECT DISTINCT k.manufacturer, k.model, k.price, n.rating, n.reviews, k.attrib_1, k.attrib_2, k.attrib_3, k.url AS kakaku_url, n.url AS newegg_url
   FROM kakaku_search k
   LEFT JOIN newegg_search n
   ON k.model=n.model
