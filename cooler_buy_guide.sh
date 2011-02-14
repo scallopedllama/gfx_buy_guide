@@ -144,7 +144,7 @@ do
   j=$(printf "%02d" "$i")
   # 1: Mfg    2: url    3: model    4: price
   #         ...<td class=\"item\"> MFG  <p><a href=\" URL  \"><strong> MODEL</strong></a></p></td><td class=\"td-price\"><a href=..>&#165;        PRICE     </a><br><span>..</span></td><td>..</td><td>..</td><td>..</td><td>..<br><a href=..>..</a></td><td><a href=..>..</a></td><td>..</td><td class=\"select\">..</td><td>..</td><td>..</td><td>..</td><td>..</td><td class=\"end\">..</td></tr>
-  sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=\"\(.*\)\"><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*,*[0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br><a href=.*>.*</a></td><td><a href=.*>.*</a></td><td>.*</td><td class=\"select\">.*</td><td>.*</td><td>.*</td><td>.*</td><td>.*</td><td class=\"end\">.*</td></tr>:\1\t\3\t\4\t\2:gp" coolers$j.html >> coolers.tsv
+  sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=\"\(.*\)\"><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*,*[0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br><a href=.*>.*</a></td><td><a href=.*>.*</a></td><td>.*</td><td class=\"select\">.*</td><td>.*</td><td>.*</td><td>.*</td><td>.*</td><td class=\"end\">.*</td></tr>:\1\t\3\t\4\t\2:gp" coolers$j.html | sed "s:,::g" >> coolers.tsv
 done
 
 #make sure it has a reasonable number of entries
