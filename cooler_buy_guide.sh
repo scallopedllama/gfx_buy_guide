@@ -43,7 +43,7 @@ echo -n "Frostytech.com cooler noise rankings: "
 # If the script fails to get this file or it fails to get an adequate number of entries for noise,
 # The url wget retrieves here may need to be updated. Just go to frostytech.com and look at one of
 # the coolers in the top 5 for your cpu and put the url for the page listing its noise raking here.
-wget -q -O noise.html http://www.frostytech.com/articleview.cfm?articleid=2521&page=3
+wget -q -O noise.n.html "http://www.frostytech.com/articleview.cfm?articleid=2521&page=3"
 if [ -a "noise.html" ]
 then
   echo "ok."
@@ -62,7 +62,7 @@ echo -n "Frostytech.com cooler temperature rankings: "
 # If the script fails to get this file or it fails to get an adequate number of entries for noise,
 # The url wget retrieves here may need to be updated. Just go to frostytech.com and look at one of
 # the coolers in the top 5 for your cpu and put the url for the page listing its noise raking here.
-wget -q -O temp.html http://www.frostytech.com/articleview.cfm?articleid=2521&page=4
+wget -q -O temp.n.html "http://www.frostytech.com/articleview.cfm?articleid=2521&page=4"
 if [ -a "temp.html" ]
 then
   echo "ok."
@@ -108,27 +108,36 @@ do
   rm coolers$j.sj.html
 done
 
-exit 0
+# Remove the newlines from the frostytech files it got.. it's not a uniform looking page at all
+tr -d '\n\r' < noise.n.html > noise.html
+tr -d '\n\r' < temp.n.html > temp.html
 
-# This will use sed to parse the relevant benchmark data out of the html of the benchmark.html file.
-# It matches on a very specific pattern and replaces the whole line with a simple one that has the format
-#    Rank   Card  Score
-# Where each item has a tab between it. This data can be easily loaded into mysql with the following command:
-#    LOAD DATA LOCAL INFILE "benchmarks.tsv" INTO TABLE benchmarks;
-# This command will probably not need to be modified.
+# This will use sed to parse the relevant benchmark data out of the html of the noise.html file.
 # That last 'g' is needed to ensure it does all replacements. The last 'p' combines with the -n option to ONLY print the lines that have been changed ONCE.
-# Example line: <tr><td id="rk1" class="chart">GeForce GTX 580</td><td id="rt1" class="value"><img src="images/bars/bar1.png" width="347" height="10" onMouseOut="HTAD()" onMouseOver="STAD( event, 1, 257 )"/>3,819</td></tr>
-sed -n "s:^<tr><td id=\"rk\([0-9]*\)\" class=\"chart\">\(.*\)</td><td id=\"rt.*\" class=\"value\"><img src=\".*\" width=\"[0-9]*\" height=\"[0-9]*\" onMouseOut=\".*\" onMouseOver=\".*\"/>\([0-9]*\),*\([0-9]*\)</td></tr>$:\1\t\2\t\3\4:pg" benchmarks.html > benchmarks.tsv
+# Example line: <tr bgcolor="#d1dfe9">    <td>Spire</td>    <td>Thermax Eclipse</td>    <td></td>    <td>51.3 dB</td>    <td>Intel/AMD</td></tr>
+# 1: Mfg    2: Model    3: Fan Speed    4: Noise    5:CPU
+sed "s:</[tT][rR]>:</TR>\n:g" noise.html | sed -n "s:^.*<TR.*> *<TD> *\(.*\)</TD> *<TD> *\(.*\)</TD> *<TD> *\(.*\)</TD> *<TD> *\(.*\)</TD> *<TD> *\(.*\)</TD> *</TR>.*$:\1\t\2\t\3\t\4:gp" > noise.tsv
+# Example line: <tr bgcolor="#d1dfe9">    <td>Spire</td>    <td>Thermax Eclipse II (2 fans)</td>    <td></td>    <td>10.2</td>    <td>56.9</td></tr>
+# 1: Mfg    2: Model   3: Fan Speed    4: 125W Test (degrees C)    5: Noise Level (dB)
+sed "s:</[tT][rR]>:</TR>\n:g" temp.html | sed -n "s:^.*<TR.*> *<TD> *\(.*\)</TD> *<TD> *\(.*\)</TD> *<TD> *\(.*\)</TD> *<TD> *\(.*\)</TD> *<TD> *\(.*\)</TD> *</TR>.*$:\1\t\2\t\3\t\4\t\5:gp" > temp.tsv
 
-# Make sure there's some data in that file
-benchmark_entries=`wc -l benchmarks.tsv | awk '{print($1)}'`
-if [ $benchmark_entries -lt 50 ]
+# Make sure there's some data in those files
+noise_entries=`wc -l noise.tsv | awk '{print($1)}'`
+if [ $noise_entries -lt 50 ]
 then
-  echo "Warning: The processed benchmark file gave fewer than 50 entries for the database."
-  echo "         This may be because passmark changed their site layout and the sed regex doesn't work anymore."
-  echo "         Got $benchmark_entries entries. Continuing anyway."
+  echo "Warning: The processed noise file gave fewer than 50 entries for the database."
+  echo "         This may be because frostytech changed their site layout and the sed regex doesn't work anymore."
+  echo "         Got $noise_entries entries. Continuing anyway."
+fi
+temp_entries=`wc -l temp.tsv | awk '{print($1)}'`
+if [ $temp_entries -lt 50 ]
+then
+  echo "Warning: The processed temp file gave fewer than 50 entries for the database."
+  echo "         This may be because frostytech changed their site layout and the sed regex doesn't work anymore."
+  echo "         Got $temp_entries entries. Continuing anyway."
 fi
 
+exit 0
 
 # This will use sed to parse the relevant data out of each of the html files for the kakaku listings.
 # If you've never used sed before, it's probably a good idea to go look at a tutorial but here is the jist of what we're doing.
