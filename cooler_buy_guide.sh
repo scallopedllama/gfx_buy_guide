@@ -73,41 +73,24 @@ else
   exit 1
 fi
 
-exit 0
-
 echo "Getting kakaku.com page listings."
 
 # Loop through getting all the kakaku page listings
 for (( i=1; i<=$1; i++ ))
 do
-  # All the pages of the kakaku listings      \/ Page number, ex: 001, 002, etc
-  #    http://kakaku.com/pc/videocard/ma_0/p1NNN/s1=1/s3=1024/
+  # All the pages of the kakaku listings       \/ Page number, ex: 001, 002, etc
+  #    http://kakaku.com/pc/cpu-cooler/ma_0/e20NN/s4=1/
   echo -n "  Page $i: "
-
-  # To modify this to work with a different source like Newegg, you need to go to that page and
-  # filter the list down as much as possible. For example, the kakaku page above returns only PCI Express 16x
-  # cards with 1GB or more of RAM. If you only want to look at Nvidia cards, include that in the filter.
-  # Once you have the list filtered to your liking, copy out the url of the first page of results into a text editor.
-  # Then go to the second page of results and copy that url into the same text editor.
-  # Try to find what changes in the url between each page of the results.
-  # For the kakaku example, the .../p1001/... part of the url changes to .../p1002/... for the second page.
-  # If the url of your results page increments by some arbitrary amount every page, you will need to modify
-  # the for loop on line 60 to the following:
-  # for (( i=$start_value; i<=$(($1*$arbitrary_amount+$start_value)); i+=$arbitrary_amount ))
-  # Where $arbitrary_amount is how much each page increments by and $start_value is where it starts.
 
   # This formats the current page counter to a string with 0s padding the front so that it is 2 characters long.
   # If the number of pages in your results go into the hundreds or thousands, you will need to modify the amount
   # padding this printf uses.
   j=$(printf "%02d" "$i")
 
-  # The text after the -O flag indicates the output so don't change that, just change the url that follows.
-  # Take the url you got from your search and put it here and replace only the part that changes with a $j.
-  # It should work just fine so long as you changed the printf above correctly.
-  wget -q -O cards$j.sj.html http://kakaku.com/pc/videocard/ma_0/p10$j/s1=1/s3=1024/
+  wget -q -O coolers$j.sj.html http://kakaku.com/pc/cpu-cooler/ma_0/e20$j/s4=1/
 
   # Make sure it's there
-  if [ -a "cards$j.sj.html" ]
+  if [ -a "coolers$j.sj.html" ]
   then
     echo "ok."
   else
@@ -121,9 +104,11 @@ do
   # Or sed WILL fail to match Japanese characters with the . wildcard.
   # If you're working on a US site, you can remove these two lines. If it's some other international site,
   # you will probably have to change the from encoding after the -f tag.
-  iconv -f SHIFT_JIS -t UTF-8 cards$j.sj.html > cards$j.html
-  rm cards$j.sj.html
+  iconv -f SHIFT_JIS -t UTF-8 coolers$j.sj.html > coolers$j.html
+  rm coolers$j.sj.html
 done
+
+exit 0
 
 # This will use sed to parse the relevant benchmark data out of the html of the benchmark.html file.
 # It matches on a very specific pattern and replaces the whole line with a simple one that has the format
