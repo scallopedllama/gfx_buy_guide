@@ -190,10 +190,10 @@ mysql -u$username -p$password -e "USE guide;
 echo "ok"
 echo -n "Running query..."
 mysql -u$username -p$password -e "USE guide;
-  SELECT DISTINCT k.manufacturer, k.model, k.price, n.noise, t.temp, k.url
+  SELECT DISTINCT k.manufacturer, k.model, n.model, k.price, n.noise, t.temp, k.url
   FROM cool_kakaku k
-  LEFT JOIN cool_noise n ON k.model=n.model
-  LEFT JOIN cool_temp t ON k.model=t.model
+  LEFT JOIN cool_noise n ON LOWER(k.model) LIKE CONCAT('%', LOWER(n.model), '%')
+  LEFT JOIN cool_temp t ON LOWER(k.model) LIKE CONCAT('%', LOWER(t.model), '%')
   ORDER BY k.price ASC;" > cooler_data.n.tsv
 echo "ok"
 
