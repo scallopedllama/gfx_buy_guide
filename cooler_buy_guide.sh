@@ -111,6 +111,7 @@ done
 # Remove the newlines from the frostytech files it got.. it's not a uniform looking page at all
 tr -d '\n\r' < noise.n.html > noise.html
 tr -d '\n\r' < temp.n.html > temp.html
+rm noise.n.html temp.n.html
 
 # This will use sed to parse the relevant benchmark data out of the html of the noise.html file.
 # That last 'g' is needed to ensure it does all replacements. The last 'p' combines with the -n option to ONLY print the lines that have been changed ONCE.
@@ -137,43 +138,27 @@ then
   echo "         Got $temp_entries entries. Continuing anyway."
 fi
 
-exit 0
-
 # This will use sed to parse the relevant data out of each of the html files for the kakaku listings.
-# If you've never used sed before, it's probably a good idea to go look at a tutorial but here is the jist of what we're doing.
-# Get an example line that contains ONE listing from the results page.
-# Kakaku.com example line: "...<td class="item">INNOVISION<p><a href="http://kakaku.com/item/K0000166014/"><strong>Inno3D Geforce 9400GT [PCIExp 1GB]</strong></a></p></td><td class="td-price select"><a href="http://kakaku.com/item/K0000166014/">&#165;5,980</a><br><span>PC-IDEA</span></td><td>1店舗</td><td>382位</td><td>530位</td><td>-<br><a href="http://review.kakaku.com/review/K0000166014/">(0件)</a></td><td><a href="http://bbs.kakaku.com/bbs/K0000166014/">0件</a></td><td>-</td><td>10/11/10</td><td>PCIExp 16X&nbsp;</td><td>NVIDIA<br>GeForce 9400 GT&nbsp;</td><td>GDDR2<br>1024MB&nbsp;</td><td class="end">D-SUBx1<br>DVIx1&nbsp;</td></tr>"
-# The general sed command is 'sed -n "s:[MATCH]:[REPLACE]:pg" [INPUT FILE] > [OUTPUT FILE]
-# This command will only print a line if it has a match (because of the -n option and the p option) and will check every line in the file (because of the g option).
-# [MATCH] Is a generalized string that you're looking for. ^ matches the start of the line, $ matches the end. Replace text with .*, numbers with [0-9]*, and wrap the information you want with \( and /). Escape all you're "s.
-# [REPLACE] is the string you want to replace all that was match with. It'll be like \1\t\2\t\3\t\4. Each \# refers to the #th block of text you wrapped in \( and \). the \t is a tab. Space your fields out with \t so MySQL will be happy.
-# 1: manufacturer, 2: model, 3: price, 4: price pt 2, 5: Chip, 6: ram type, 7: ram amount, 8: outputs
 for (( i=1; i<=$1; i++ ))
 do
   j=$(printf "%02d" "$i")
-  # Append to the tsv file
-  sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=.*><strong>\(.*\)</strong></a></p></td><td class=\"td-price select\"><a href=.*>&#165;\([0-9]*\),*\([0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br><a href=.*>.*</a></td><td><a href=.*>.*</a></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br>\(.*\)&nbsp;</td><td>\(.*\)<br>\(.*\)&nbsp;</td><td class=\"end\">\(.*\)&nbsp;</td></tr>:\1 \2\t\3\4\t\5\t\6\t\7\t\8:gp" cards$j.html >> cards.br.tsv
+  # 1: Mfg    2: url    3: model    4: price
+  #         ...<td class=\"item\"> MFG  <p><a href=\" URL  \"><strong> MODEL</strong></a></p></td><td class=\"td-price\"><a href=..>&#165;        PRICE     </a><br><span>..</span></td><td>..</td><td>..</td><td>..</td><td>..<br><a href=..>..</a></td><td><a href=..>..</a></td><td>..</td><td class=\"select\">..</td><td>..</td><td>..</td><td>..</td><td>..</td><td class=\"end\">..</td></tr>
+  sed -n "s:^.*<td class=\"item\">\(.*\)<p><a href=\"\(.*\)\"><strong>\(.*\)</strong></a></p></td><td class=\"td-price\"><a href=.*>&#165;\([0-9]*,*[0-9]*\)</a><br><span>.*</span></td><td>.*</td><td>.*</td><td>.*</td><td>.*<br><a href=.*>.*</a></td><td><a href=.*>.*</a></td><td>.*</td><td class=\"select\">.*</td><td>.*</td><td>.*</td><td>.*</td><td>.*</td><td class=\"end\">.*</td></tr>:\1\t\3\t\4\t\2:gp" coolers$j.html >> coolers.tsv
 done
 
-# Clean up the kakaku listing a little bit
-# The output listings always have <br>s in them. Let's get rid of them really quick
-sed "s:<br>: :g" cards.br.tsv > cards.n.tsv
-# These two are probably not needed, but just in case.
-sed "s:Geforce:GeForce:g" cards.n.tsv > cards.r.tsv
-sed "s:RADEON:Radeon:g" cards.r.tsv > cards.tsv
-rm cards.*.tsv
-
 #make sure it has a reasonable number of entries
-card_entries=`wc -l cards.tsv | awk '{print($1)}'`
-if [ $card_entries -lt $(($1-1)) ]
+kakaku_entries=`wc -l coolers.tsv | awk '{print($1)}'`
+one_less_pages=$(($1-1))
+if [ $kakaku_entries -lt $(($one_less_pages*40)) ]
 then
-  echo "Warning: The processed cards files gave fewer than 40 * ($1 pages - 1) entries."
+  echo "Warning: The processed kakaku search files gave fewer than 40 * ($1 pages - 1) entries."
   echo "         This may be because kakaku.com changed their site layout and the sed regex doesn't work anymore."
-  echo "         Got $card_entries entries. Continuing anyway."
+  echo "         Got $kakaku_entries entries. Continuing anyway."
 fi
 
 # Status report
-echo "Got $benchmark_entries benchmarks and $card_entries kakaku.com listings."
+echo "Got $noise_entries noise rankings, $temp_entries temperature rankings, and $kakaku_entries kakaku.com listings."
 echo ""
 
 # Get the mySql password and username
@@ -185,20 +170,34 @@ stty echo
 # Now run the relevant commands.
 echo ""
 echo -n "Dropping old tables..."
-mysql -u$username -p$password -e "USE gpu; DROP TABLE benchmarks; DROP TABLE cards;" > /dev/null 2>&1
+mysql -u$username -p$password -e "USE guide;
+  DROP TABLE kakaku_search; DROP TABLE newegg_search;" > /dev/null 2>&1
 echo "ok"
 echo -n "Re-creating old table..."
-# Look at MySQL cheat sheets to understand what the particualrs of the fields are. You may need to modify the table descriptions to match the data you got from your retailer.
-mysql -u$username -p$password -e "USE gpu; CREATE TABLE benchmarks (rank INT(6), gpu VARCHAR(256), score INT (11)); CREATE TABLE cards (name VARCHAR(256), price INT(11), gpu VARCHAR(256), ram_type VARCHAR(26), ram VARCHAR(26), outputs VARCHAR(256));"
+# kakaku.tsv: Manufacturer, model, price, size, speed, cache size, url
+# newegg.tsv: model    rating    reviews    url
+mysql -u$username -p$password -e "USE guide;
+  CREATE TABLE kakaku_search (manufacturer VARCHAR(256), model VARCHAR(256), price INT(11), attrib_1 VARCHAR(126), attrib_2 VARCHAR(126), attrib_3 VARCHAR(126), url VARCHAR(256));
+  CREATE TABLE newegg_search (model VARCHAR(256), rating INT(2), reviews INT(11), url VARCHAR(256));"
 echo "ok"
 echo -n "Adding data..."
-# Shouldn't need to modify this at all
-mysql -u$username -p$password -e "USE gpu; LOAD DATA LOCAL INFILE \"benchmarks.tsv\" INTO TABLE benchmarks; LOAD DATA LOCAL INFILE \"cards.tsv\" INTO TABLE cards;"
+mysql -u$username -p$password -e "USE guide;
+  LOAD DATA LOCAL INFILE \"kakaku.tsv\" INTO TABLE kakaku_search;
+  LOAD DATA LOCAL INFILE \"newegg_results.tsv\" INTO TABLE newegg_search;"
 echo "ok"
 echo -n "Running query..."
-# The important bit on this query is that it joins the gpu fields. You can change what it selects but make sure you have the INNER JOIN intact.
-mysql -u$username -p$password -e "USE gpu; SELECT c.name, c.gpu, c.price, b.rank, b.score, c.ram_type, c.ram, c.outputs FROM cards c INNER JOIN benchmarks b ON c.gpu=b.gpu ORDER BY b.rank, price ASC;" > card_data.tsv
+mysql -u$username -p$password -e "USE guide;
+  SELECT DISTINCT k.manufacturer, k.model, k.price, n.rating, n.reviews, k.attrib_1, k.attrib_2, k.attrib_3, k.url AS kakaku_url, n.url AS newegg_url
+  FROM kakaku_search k
+  LEFT JOIN newegg_search n
+  ON k.model=n.model
+  ORDER BY k.price ASC;" > search_data.n.tsv
 echo "ok"
+
+# mySQL wrapps the output with a \r which is useless to us so look for the string \r and replace it with nothing
+# While at that, replace all the NULLs with empty strings.
+sed 's:\r::g' search_data.n.tsv | sed 's:NULL::g' > search_data.tsv
+rm search_data.n.tsv
 
 echo ""
 echo "All done."
