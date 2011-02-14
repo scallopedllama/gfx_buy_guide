@@ -184,7 +184,7 @@ mysql -u$username -p$password -e "USE guide;
 echo "ok"
 echo -n "Adding data..."
 mysql -u$username -p$password -e "USE guide;
-  LOAD DATA LOCAL INFILE \"kakaku.tsv\" INTO TABLE cool_kakaku;
+  LOAD DATA LOCAL INFILE \"coolers.tsv\" INTO TABLE cool_kakaku;
   LOAD DATA LOCAL INFILE \"noise.tsv\" INTO TABLE cool_noise;
   LOAD DATA LOCAL INFILE \"temp.tsv\" INTO TABLE cool_temp;"
 echo "ok"
