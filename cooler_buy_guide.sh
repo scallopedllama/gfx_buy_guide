@@ -44,7 +44,7 @@ echo -n "Frostytech.com cooler noise rankings: "
 # The url wget retrieves here may need to be updated. Just go to frostytech.com and look at one of
 # the coolers in the top 5 for your cpu and put the url for the page listing its noise raking here.
 wget -q -O noise.n.html "http://www.frostytech.com/articleview.cfm?articleid=2521&page=3"
-if [ -a "noise.html" ]
+if [ -a "noise.n.html" ]
 then
   echo "ok."
 else
@@ -63,7 +63,7 @@ echo -n "Frostytech.com cooler temperature rankings: "
 # The url wget retrieves here may need to be updated. Just go to frostytech.com and look at one of
 # the coolers in the top 5 for your cpu and put the url for the page listing its noise raking here.
 wget -q -O temp.n.html "http://www.frostytech.com/articleview.cfm?articleid=2521&page=4"
-if [ -a "temp.html" ]
+if [ -a "temp.n.html" ]
 then
   echo "ok."
 else
