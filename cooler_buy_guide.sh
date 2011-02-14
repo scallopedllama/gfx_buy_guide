@@ -171,44 +171,49 @@ stty echo
 echo ""
 echo -n "Dropping old tables..."
 mysql -u$username -p$password -e "USE guide;
-  DROP TABLE kakaku_search; DROP TABLE newegg_search;" > /dev/null 2>&1
+  DROP TABLE cool_kakaku; DROP TABLE cool_noise; DROP TABLE cool_temp;" > /dev/null 2>&1
 echo "ok"
 echo -n "Re-creating old table..."
-# kakaku.tsv: Manufacturer, model, price, size, speed, cache size, url
-# newegg.tsv: model    rating    reviews    url
+# kakaku.tsv: Mfg      model     price        url
+# noise.tsv:  Mfg      Model     Fan Speed    Noise
+# temp.tsv:   Mfg      Model     Fan Speed    125W Test (degrees C)        Noise Level (dB)
 mysql -u$username -p$password -e "USE guide;
-  CREATE TABLE kakaku_search (manufacturer VARCHAR(256), model VARCHAR(256), price INT(11), attrib_1 VARCHAR(126), attrib_2 VARCHAR(126), attrib_3 VARCHAR(126), url VARCHAR(256));
-  CREATE TABLE newegg_search (model VARCHAR(256), rating INT(2), reviews INT(11), url VARCHAR(256));"
+  CREATE TABLE cool_kakaku (manufacturer VARCHAR(256), model VARCHAR(256), price INT(11), url VARCHAR(256));
+  CREATE TABLE cool_noise  (manufacturer VARCHAR(256), model VARCHAR(256), fan_speed VARCHAR(16), noise VARCHAR(128));
+  CREATE TABLE cool_temp   (manufacturer VARCHAR(256), model VARCHAR(256), fan_speed VARCHAR(16), temp DOUBLE, noise DOUBLE);"
 echo "ok"
 echo -n "Adding data..."
 mysql -u$username -p$password -e "USE guide;
-  LOAD DATA LOCAL INFILE \"kakaku.tsv\" INTO TABLE kakaku_search;
-  LOAD DATA LOCAL INFILE \"newegg_results.tsv\" INTO TABLE newegg_search;"
+  LOAD DATA LOCAL INFILE \"kakaku.tsv\" INTO TABLE cool_kakaku;
+  LOAD DATA LOCAL INFILE \"noise.tsv\" INTO TABLE cool_noise;
+  LOAD DATA LOCAL INFILE \"temp.tsv\" INTO TABLE cool_temp;"
 echo "ok"
 echo -n "Running query..."
 mysql -u$username -p$password -e "USE guide;
-  SELECT DISTINCT k.manufacturer, k.model, k.price, n.rating, n.reviews, k.attrib_1, k.attrib_2, k.attrib_3, k.url AS kakaku_url, n.url AS newegg_url
-  FROM kakaku_search k
-  LEFT JOIN newegg_search n
-  ON k.model=n.model
-  ORDER BY k.price ASC;" > search_data.n.tsv
+  SELECT DISTINCT k.manufacturer, k.model, k.price, n.noise, t.temp, k.url
+  FROM cool_kakaku k
+  LEFT JOIN cool_noise n ON k.model=n.model
+  LEFT JOIN cool_temp t ON k.model=t.model
+  ORDER BY k.price ASC;" > cooler_data.n.tsv
 echo "ok"
 
 # mySQL wrapps the output with a \r which is useless to us so look for the string \r and replace it with nothing
 # While at that, replace all the NULLs with empty strings.
-sed 's:\r::g' search_data.n.tsv | sed 's:NULL::g' > search_data.tsv
-rm search_data.n.tsv
+sed 's:\r::g' cooler_data.n.tsv | sed 's:NULL::g' > cooler_data.tsv
+rm cooler_data.n.tsv
 
 echo ""
 echo "All done."
-echo "The joined data has been dumped into the file called card_data.tsv."
+echo "The joined data has been dumped into the file called cooler_data.tsv."
 echo "It's a tab-separated-value file that can easily be pasted into a spreadsheet to get a better look at the data."
 echo "All intermediate files including the original html data has been deleted. The MySQL database tables remain."
 
 # Clean everything up
-rm benchmarks.html
-rm benchmarks.tsv
-rm cards??.html
-rm cards.tsv
+rm temp.html
+rm temp.tsv
+rm coolers??.html
+rm coolers.tsv
+rm noise.html
+rm noise.tsv
 
 exit 0
